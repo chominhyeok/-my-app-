@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>위시리스트 앱</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;background:#1c1c1e;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.phone{width:393px;height:852px;background:#fff;border-radius:44px;overflow:hidden;position:relative;box-shadow:0 40px 100px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.12)}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;background:#fff}
+.screen.active{display:flex}
+
+/* STATUS BAR */
+.sbar{height:53px;background:#060606;display:flex;align-items:center;justify-content:space-between;padding:16px 21px 0;flex-shrink:0}
+.sbar .time{color:#fff;font-size:14px;font-weight:600;letter-spacing:-.28px}
+.sbar .icons{display:flex;align-items:center;gap:6px}
+
+/* LOGO BAR */
+.lbar{height:53px;background:#060606;display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0}
+.lbar .logo{color:#fff;font-size:20px;font-weight:700}
+.lbar .licons{display:flex;gap:4px}
+.lbar .licons button{width:44px;height:44px;background:rgba(255,255,255,.15);border-radius:8px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+/* PAGE HEADER */
+.phead{height:54px;background:#fff;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;border-bottom:1px solid #f3f4f6}
+.phead .back{position:absolute;left:16px;background:none;border:none;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center}
+.phead .ptitle{font-size:18px;font-weight:500;color:#0a0a0a;letter-spacing:-.44px}
+.phead .paction{position:absolute;right:16px;background:#f3f4f6;border:none;cursor:pointer;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:500;color:#0a0a0a;font-family:inherit}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.content::-webkit-scrollbar{display:none}
+
+/* BOTTOM NAV */
+.bnav{height:96px;background:#fff;border-top:1px solid #f3f4f6;display:flex;align-items:flex-start;padding-top:8px;flex-shrink:0;position:relative}
+.bnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;border:none;background:none;cursor:pointer;padding-top:4px}
+.bnav button span{font-size:10px;color:#6a7282;font-weight:500;font-family:inherit}
+.bnav button.active span{color:#0a0a0a}
+.home-ind{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:139px;height:5px;background:#0a0a0a;border-radius:100px}
+
+/* SEARCH BAR */
+.searchbar{margin:8px 16px;background:#f3f4f6;border-radius:10px;height:36px;display:flex;align-items:center;padding:0 12px;gap:8px}
+.searchbar input{border:none;background:none;outline:none;font-size:14px;color:rgba(0,0,0,.5);flex:1;font-family:inherit}
+
+/* FILTER CHIPS */
+.chips{display:flex;gap:8px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;height:32px;padding:0 16px;border-radius:999px;border:none;cursor:pointer;font-size:14px;font-weight:500;font-family:inherit;background:#f3f4f6;color:#364153;transition:background .15s,color .15s}
+.chip.active{background:#0a0a0a;color:#fff}
+
+/* SORT ROW */
+.sortrow{display:flex;align-items:center;justify-content:space-between;padding:0 16px 8px}
+.sortrow .sortbtn{display:flex;align-items:center;gap:4px;font-size:14px;color:#0a0a0a;font-weight:500;background:none;border:none;cursor:pointer;font-family:inherit}
+
+/* PRODUCT GRID */
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.pcard{aspect-ratio:1;background:#f3f4f6;position:relative;overflow:hidden;cursor:pointer}
+.pcard img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s}
+.pcard:hover img{transform:scale(1.02)}
+.pcard .chk{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.pcard.sel .chk{background:#0a0a0a;border-color:#0a0a0a}
+.pcard.sel .chk::after{content:'';display:block;width:5px;height:9px;border:2px solid #fff;border-top:none;border-left:none;transform:rotate(45deg) translate(-1px,-1px)}
+
+/* COMPARE BAR */
+.cmpbar{padding:0 16px 10px;background:#fff}
+.cmpbtn{width:100%;height:46px;background:#0a0a0a;color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:16px;font-weight:500;font-family:inherit}
+
+/* COMPARE SCREEN */
+.cmpnotice{margin:8px 16px;background:#f3f4f6;border-radius:10px;height:36px;padding:0 14px;display:flex;align-items:center;font-size:14px;color:#364153}
+.cmpimgs{display:flex;gap:2px}
+.cmpimg{flex:1;background:#f3f4f6;position:relative;overflow:hidden}
+.cmpimg img{width:100%;height:240px;object-fit:cover;display:block}
+.cmpimg .picons{position:absolute;top:8px;display:flex;gap:6px}
+.cmpimg:first-child .picons{right:8px}
+.cmpimg:last-child .picons{left:8px}
+.picon{width:28px;height:28px;background:rgba(255,255,255,.88);border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cmpcols{display:flex}
+.cmpcol{flex:1;padding:12px 14px;border-right:1px solid #f3f4f6}
+.cmpcol:last-child{border-right:none}
+.cmpcol .cn{font-size:14px;font-weight:600;color:#0a0a0a}
+.cmpcol .cp{font-size:14px;color:#0a0a0a;margin-top:2px;margin-bottom:10px}
+.cmpcol .row{display:flex;justify-content:space-between;margin-bottom:3px}
+.cmpcol .row .lbl{font-size:13px;color:#0a0a0a}
+.cmpcol .row .val{font-size:13px;color:rgba(0,0,0,.5)}
+.cmpcol .ctags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.cmpcol .ctag{background:#f3f4f6;border-radius:5px;padding:2px 8px;font-size:12px}
+.moodbtns{display:flex;gap:8px;padding:8px 16px}
+.moodbtn{flex:1;height:34px;border-radius:10px;border:1px solid #d1d5db;background:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.ctabtn{margin:4px 16px 12px;width:calc(100% - 32px);height:46px;background:#0a0a0a;color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:16px;font-weight:500;font-family:inherit}
+
+/* PURCHASE CANDIDATE */
+.pitem{background:#f3f4f6;margin:4px 16px;border-radius:10px;overflow:hidden}
+.pitem-top{display:flex;min-height:160px}
+.pitem-thumb{width:130px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:16px}
+.pitem-thumb img{width:98px;height:98px;object-fit:cover;border-radius:5px;background:#fff}
+.pitem-info{flex:1;padding:16px 12px 0}
+.pitem-info .brand{font-size:12px;color:#6a7282}
+.pitem-info .name{font-size:14px;font-weight:600;color:#101828;margin-top:2px}
+.pitem-info .price{font-size:14px;font-weight:600;color:#0a0a0a;margin-top:4px}
+.pitem-actions{display:flex;padding:10px 12px 12px;gap:8px}
+.btn-detail{flex:1;height:37px;border-radius:10px;background:#fff;border:none;cursor:pointer;font-size:12px;font-weight:500;font-family:inherit;color:#0a0a0a}
+.btn-buy{flex:1;height:37px;border-radius:10px;background:#0a0a0a;border:none;cursor:pointer;font-size:12px;font-weight:500;font-family:inherit;color:#fff}
+
+/* DETAIL */
+.dhero{background:#f3f4f6;height:260px;margin:16px 16px 0;border-radius:10px;overflow:hidden;position:relative}
+.dhero img{width:100%;height:100%;object-fit:cover;display:block}
+.dbadge{position:absolute;top:12px;left:12px;background:#fb2c36;color:#fff;border-radius:999px;padding:4px 12px;font-size:10px;font-weight:600}
+.dinfo{padding:12px 16px 0}
+.dbrand{font-size:12px;color:#6a7282}
+.dname{font-size:14px;font-weight:600;color:#101828;margin-top:2px}
+.dpricerow{display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap}
+.dprice{font-size:14px;font-weight:600;color:#0a0a0a}
+.dchange{font-size:14px;font-weight:600;color:#fb2c36}
+.dmeta{margin-top:4px;font-size:13px;color:#6a7282;display:flex;align-items:center;gap:4px}
+.dmeta .dot{color:#d1d5dc}
+.dmeta .grn{color:#00a63e;font-weight:500}
+.dsec{margin:12px 16px;padding:12px 0;border-top:1px solid #d9d9d9;border-bottom:1px solid #d9d9d9}
+.dsec-title{font-size:11px;font-weight:600;color:#99a1af;text-transform:uppercase;letter-spacing:1.16px;margin-bottom:10px}
+.dtags{display:flex;gap:8px;flex-wrap:wrap}
+.dtag{background:#f3f4f6;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:500;color:#4a5565}
+.dmemosec{margin:0 16px 12px}
+.dmemod{background:#f3f4f6;border-radius:8px;padding:12px 16px;font-size:14px;color:#364153;margin-top:8px}
+.dattrs{margin:12px 16px;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden}
+.drow{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #f3f4f6}
+.drow:last-child{border-bottom:none}
+.dlbl{font-size:13px;color:#6a7282}
+.dval{font-size:14px;font-weight:600;color:#101828}
+.dval.grn{color:#00a63e}
+.dval.red{color:#fb2c36}
+.dpri{background:#101828;color:#fff;border-radius:999px;padding:3px 12px;font-size:12px;font-weight:600}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="phone">
+
+<!-- ===== SCREEN 1: 위시리스트 ===== -->
+<div id="s1" class="screen active">
+  <div class="sbar">
+    <span class="time">9:41</span>
+    <div class="icons">
+      <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="white"/><rect x="4.5" y="5" width="3" height="7" rx="1" fill="white"/><rect x="9" y="2.5" width="3" height="9.5" rx="1" fill="white"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="white"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 9a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" fill="white"/><path d="M3.8 6.2a6 6 0 018.4 0" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/><path d="M1 3.5a10 10 0 0114 0" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none" opacity=".5"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x=".5" y=".5" width="21" height="11" rx="3" stroke="rgba(255,255,255,.5)" fill="none"/><rect x="2" y="2" width="18" height="8" rx="2" fill="white"/><path d="M23 4v4a2 2 0 000-4z" fill="rgba(255,255,255,.5)"/></svg>
+    </div>
+  </div>
+  <div class="lbar">
+    <span class="logo">LOGO</span>
+    <div class="licons">
+      <button><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="10" cy="10" r="6.5" stroke="white" stroke-width="1.5"/><path d="M15 15l4 4" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+      <button><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 6h16M3 11h16M3 16h16" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+  </div>
+  <div class="phead">
+    <button class="back"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M13 4l-6 6 6 6" stroke="#0a0a0a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <span class="ptitle">위시리스트</span>
+    <button class="paction" onclick="go('s3')">구매 후보</button>
+  </div>
+  <div class="content">
+    <div class="searchbar">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="8" cy="8" r="5.5" stroke="#6a7282" stroke-width="1.4"/><path d="M12.5 12.5l3 3" stroke="#6a7282" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <input type="text" placeholder="저장한 상품 검색">
+    </div>
+    <div class="sortrow">
+      <button class="sortbtn">최근 저장순 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="#0a0a0a" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M6 10h8M9 15h2" stroke="#0a0a0a" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+    <div class="chips">
+      <button class="chip active" onclick="setChip(this,'s1')">전체</button>
+      <button class="chip" onclick="setChip(this,'s1')">판매중</button>
+      <button class="chip" onclick="setChip(this,'s1')">가격변동</button>
+      <button class="chip" onclick="setChip(this,'s1')">품절제외</button>
+      <button class="chip" onclick="setChip(this,'s1')">데님팬츠</button>
+      <button class="chip" onclick="setChip(this,'s1')">아우터</button>
+      <button class="chip" onclick="setChip(this,'s1')">셔츠</button>
+      <button class="chip" onclick="setChip(this,'s1')">미니멀</button>
+      <button class="chip" onclick="setChip(this,'s1')">빈티지</button>
+      <button class="chip" onclick="setChip(this,'s1')">스트릿</button>
+    </div>
+    <div class="pgrid">
+      <div class="pcard" onclick="toggleSel(this)">
+        <img src="https://www.figma.com/api/mcp/asset/992a45aa-755a-4d91-8828-1c98698a7846" alt="블리치드 봄버자켓">
+        <div class="chk"></div>
+      </div>
+      <div class="pcard" onclick="toggleSel(this)">
+        <img src="https://www.figma.com/api/mcp/asset/b0380bd6-5701-4aba-9c78-ffa5747deb9e" alt="페이크 퍼 자켓">
+        <div class="chk"></div>
+      </div>
+      <div class="pcard" onclick="toggleSel(this)">
+        <img src="https://www.figma.com/api/mcp/asset/186a03ab-6d2f-48bf-ad9d-109debe6def4" alt="레더 자켓">
+        <div class="chk"></div>
+      </div>
+      <div class="pcard" onclick="toggleSel(this)">
+        <img src="https://www.figma.com/api/mcp/asset/1fdce789-1585-40e6-8a36-4f6fc64da93c" alt="상품4">
+        <div class="chk"></div>
+      </div>
+      <div class="pcard" onclick="toggleSel(this)">
+        <img src="https://www.figma.com/api/mcp/asset/c499985b-5584-4242-a23d-d1c28588cfd6" alt="상품5">
+        <div class="chk"></div>
+      </div>
+      <div class="pcard" onclick="toggleSel(this)">
+        <img src="https://www.figma.com/api/mcp/asset/992a45aa-755a-4d91-8828-1c98698a7846" alt="상품6" style="opacity:.6">
+        <div class="chk"></div>
+      </div>
+    </div>
+    <div id="cmpbar" class="cmpbar hidden">
+      <button class="cmpbtn" onclick="go('s2')">선택한 2개 상품 비교하기</button>
+    </div>
+    <div style="height:12px"></div>
+  </div>
+  <div class="bnav">
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9l7-6 7 6v8a1 1 0 01-1 1H4a1 1 0 01-1-1V9z" stroke="#6a7282" stroke-width="1.4" fill="none"/><path d="M7 19v-6h6v6" stroke="#6a7282" stroke-width="1.4" fill="none"/></svg><span>홈</span></button>
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="#6a7282" stroke-width="1.4"/><path d="M13.5 13.5l3.5 3.5" stroke="#6a7282" stroke-width="1.4" stroke-linecap="round"/></svg><span>탐색</span></button>
+    <button class="active"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="3" width="16" height="14" rx="2" stroke="#0a0a0a" stroke-width="1.4" fill="none"/><path d="M6 3V1M14 3V1M2 8h16" stroke="#0a0a0a" stroke-width="1.4" stroke-linecap="round"/></svg><span>내 피드</span></button>
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H7l-4 3V5a1 1 0 011-1z" stroke="#6a7282" stroke-width="1.4" fill="none"/></svg><span>채팅</span></button>
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="#0a0a0a" stroke-width="1.4" fill="none"/><path d="M2.5 18c0-3.59 3.36-6.5 7.5-6.5s7.5 2.91 7.5 6.5" stroke="#0a0a0a" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg><span style="color:#0a0a0a">마이</span></button>
+    <div class="home-ind"></div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 2: 상품비교 ===== -->
+<div id="s2" class="screen">
+  <div class="sbar"><span class="time">9:41</span><div class="icons"><svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="white"/><rect x="4.5" y="5" width="3" height="7" rx="1" fill="white"/><rect x="9" y="2.5" width="3" height="9.5" rx="1" fill="white"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="white"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 9a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" fill="white"/><path d="M3.8 6.2a6 6 0 018.4 0" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg><svg width="25" height="12" viewBox="0 0 25 12"><rect x=".5" y=".5" width="21" height="11" rx="3" stroke="rgba(255,255,255,.5)" fill="none"/><rect x="2" y="2" width="18" height="8" rx="2" fill="white"/></svg></div></div>
+  <div class="lbar"><span class="logo">LOGO</span><div class="licons"><button><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="10" cy="10" r="6.5" stroke="white" stroke-width="1.5"/><path d="M15 15l4 4" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></button><button><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 6h16M3 11h16M3 16h16" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></button></div></div>
+  <div class="phead">
+    <button class="back" onclick="go('s1')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M13 4l-6 6 6 6" stroke="#0a0a0a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <span class="ptitle">상품비교</span>
+  </div>
+  <div class="content">
+    <div class="cmpnotice">선택한 2개 상품을 비교하고 있습니다</div>
+    <div class="cmpimgs">
+      <div class="cmpimg">
+        <img src="https://www.figma.com/api/mcp/asset/e9ef5da0-9093-4d26-b638-488d385a70e0" alt="블리치드 봄버자켓">
+        <div class="picons">
+          <button class="picon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10l5-8 5 8H2z" stroke="#333" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg></button>
+          <button class="picon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10l-1 7H3L2 4z" stroke="#333" stroke-width="1.2" fill="none"/><path d="M5 4V2h4v2" stroke="#333" stroke-width="1.2" fill="none"/></svg></button>
+          <button class="picon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="3" cy="7" r="1.2" fill="#333"/><circle cx="7" cy="7" r="1.2" fill="#333"/><circle cx="11" cy="7" r="1.2" fill="#333"/></svg></button>
+        </div>
+      </div>
+      <div class="cmpimg">
+        <img src="https://www.figma.com/api/mcp/asset/e0d68ec5-5262-4c1b-9b22-43759ece483c" alt="페이크 퍼 자켓">
+        <div class="picons">
+          <button class="picon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10l5-8 5 8H2z" stroke="#333" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="cmpcols">
+      <div class="cmpcol">
+        <div class="cn">블리치드 봄버자켓</div>
+        <div class="cp">89,000</div>
+        <div class="row"><span class="lbl">사이즈</span><span class="val">L</span></div>
+        <div class="row"><span class="lbl">상태</span><span class="val">상</span></div>
+        <div class="row"><span class="lbl">판매 여부</span><span class="val">판매중</span></div>
+        <div class="row"><span class="lbl">저장 이유</span></div>
+        <div class="ctags"><span class="ctag">핏 참고</span><span class="ctag">가격 좋음</span></div>
+      </div>
+      <div class="cmpcol">
+        <div class="cn">페이크 퍼 자켓</div>
+        <div class="cp">89,000</div>
+        <div class="row"><span class="lbl">사이즈</span><span class="val"></span></div>
+        <div class="row"><span class="lbl">상태</span><span class="val"></span></div>
+        <div class="row"><span class="lbl">판매 여부</span></div>
+        <div class="row"><span class="lbl">저장 이유</span></div>
+        <div class="ctags"><span class="ctag">핏 참고</span></div>
+      </div>
+    </div>
+    <div class="moodbtns">
+      <button class="moodbtn">후보 무드보드에 추가</button>
+      <button class="moodbtn">후보 무드보드에 추가</button>
+    </div>
+    <button class="ctabtn" onclick="go('s3')">구매 후보로 정리하기</button>
+    <div style="height:12px"></div>
+  </div>
+  <div class="bnav">
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9l7-6 7 6v8a1 1 0 01-1 1H4a1 1 0 01-1-1V9z" stroke="#6a7282" stroke-width="1.4" fill="none"/><path d="M7 19v-6h6v6" stroke="#6a7282" stroke-width="1.4" fill="none"/></svg><span>홈</span></button>
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="#6a7282" stroke-width="1.4"/><path d="M13.5 13.5l3.5 3.5" stroke="#6a7282" stroke-width="1.4" stroke-linecap="round"/></svg><span>탐색</span></button>
+    <button class="active"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="3" width="16" height="14" rx="2" stroke="#0a0a0a" stroke-width="1.4" fill="none"/><path d="M6 3V1M14 3V1M2 8h16" stroke="#0a0a0a" stroke-width="1.4" stroke-linecap="round"/></svg><span>내 피드</span></button>
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H7l-4 3V5a1 1 0 011-1z" stroke="#6a7282" stroke-width="1.4" fill="none"/></svg><span>채팅</span></button>
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="#0a0a0a" stroke-width="1.4" fill="none"/><path d="M2.5 18c0-3.59 3.36-6.5 7.5-6.5s7.5 2.91 7.5 6.5" stroke="#0a0a0a" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg><span style="color:#0a0a0a">마이</span></button>
+    <div class="home-ind"></div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 3: 구매후보 ===== -->
+<div id="s3" class="screen">
+  <div class="sbar"><span class="time">9:41</span><div class="icons"><svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="white"/><rect x="4.5" y="5" width="3" height="7" rx="1" fill="white"/><rect x="9" y="2.5" width="3" height="9.5" rx="1" fill="white"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="white"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 9a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" fill="white"/><path d="M3.8 6.2a6 6 0 018.4 0" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg><svg width="25" height="12" viewBox="0 0 25 12"><rect x=".5" y=".5" width="21" height="11" rx="3" stroke="rgba(255,255,255,.5)" fill="none"/><rect x="2" y="2" width="18" height="8" rx="2" fill="white"/></svg></div></div>
+  <div class="lbar"><span class="logo">LOGO</span><div class="licons"><button><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="10" cy="10" r="6.5" stroke="white" stroke-width="1.5"/><path d="M15 15l4 4" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></button><button><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 6h16M3 11h16M3 16h16" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></button></div></div>
+  <div class="phead">
+    <button class="back" onclick="go('s1')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M13 4l-6 6 6 6" stroke="#0a0a0a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <span class="ptitle">구매후보</span>
+  </div>
+  <div class="content">
+    <div class="searchbar">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="8" cy="8" r="5.5" stroke="#6a7282" stroke-width="1.4"/><path d="M12.5 12.5l3 3" stroke="#6a7282" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <input type="text" placeholder="저장한 상품 검색">
+    </div>
+    <div style="height:4px"></div>
+    <div class="pitem">
+      <div class="pitem-top">
+        <div class="pitem-thumb"><img src="https://www.figma.com/api/mcp/asset/35d68ffb-ec62-49c2-b56f-e476c0bbc36e" alt="블리치드 봄버자켓"></div>
+        <div class="pitem-info"><div class="brand">999휴머니티</div><div class="name">블리치드 봄버자켓</div><div class="price">89,000원</div></div>
+      </div>
+      <div class="pitem-actions">
+        <button class="btn-detail" onclick="go('s4')">상세보기</button>
+        <button class="btn-buy">구매하기</button>
+      </div>
+    </div>
+    <div class="pitem">
+      <div class="pitem-top">
+        <div class="pitem-thumb"><img src="https://www.figma.com/api/mcp/asset/f0e3af7e-31ab-49f5-96e5-adad51041d96" alt="페이크 퍼 자켓"></div>
+        <div class="pitem-info"><div class="brand">Zara</div><div class="name">페이크 퍼 자켓</div><div class="price">89,000원</div></div>
+      </div>
+      <div class="pitem-actions">
+        <button class="btn-detail">상세보기</button>
+        <button class="btn-buy">구매하기</button>
+      </div>
+    </div>
+    <div class="pitem">
+      <div class="pitem-top">
+        <div class="pitem-thumb"><img src="https://www.figma.com/api/mcp/asset/434bbf69-00a4-46a1-ad1d-39a84da12e3d" alt="레더 자켓"></div>
+        <div class="pitem-info"><div class="brand">Zara</div><div class="name">페이크 퍼 자켓</div><div class="price">89,000원</div></div>
+      </div>
+      <div class="pitem-actions">
+        <button class="btn-detail">상세보기</button>
+        <button class="btn-buy">구매하기</button>
+      </div>
+    </div>
+    <div style="height:12px"></div>
+  </div>
+  <div class="bnav">
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9l7-6 7 6v8a1 1 0 01-1 1H4a1 1 0 01-1-1V9z" stroke="#6a7282" stroke-width="1.4" fill="none"/><path d="M7 19v-6h6v6" stroke="#6a7282" stroke-width="1.4" fill="none"/></svg><span>홈</span></button>
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="#6a7282" stroke-width="1.4"/><path d="M13.5 13.5l3.5 3.5" stroke="#6a7282" stroke-width="1.4" stroke-linecap="round"/></svg><span>탐색</span></button>
+    <button class="active"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="3" width="16" height="14" rx="2" stroke="#0a0a0a" stroke-width="1.4" fill="none"/><path d="M6 3V1M14 3V1M2 8h16" stroke="#0a0a0a" stroke-width="1.4" stroke-linecap="round"/></svg><span>내 피드</span></button>
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H7l-4 3V5a1 1 0 011-1z" stroke="#6a7282" stroke-width="1.4" fill="none"/></svg><span>채팅</span></button>
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="#0a0a0a" stroke-width="1.4" fill="none"/><path d="M2.5 18c0-3.59 3.36-6.5 7.5-6.5s7.5 2.91 7.5 6.5" stroke="#0a0a0a" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg><span style="color:#0a0a0a">마이</span></button>
+    <div class="home-ind"></div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 4: 구매후보 상세 ===== -->
+<div id="s4" class="screen">
+  <div class="sbar"><span class="time">9:41</span><div class="icons"><svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="white"/><rect x="4.5" y="5" width="3" height="7" rx="1" fill="white"/><rect x="9" y="2.5" width="3" height="9.5" rx="1" fill="white"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="white"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 9a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" fill="white"/><path d="M3.8 6.2a6 6 0 018.4 0" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg><svg width="25" height="12" viewBox="0 0 25 12"><rect x=".5" y=".5" width="21" height="11" rx="3" stroke="rgba(255,255,255,.5)" fill="none"/><rect x="2" y="2" width="18" height="8" rx="2" fill="white"/></svg></div></div>
+  <div class="lbar"><span class="logo">LOGO</span><div class="licons"><button><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="10" cy="10" r="6.5" stroke="white" stroke-width="1.5"/><path d="M15 15l4 4" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></button><button><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 6h16M3 11h16M3 16h16" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></button></div></div>
+  <div class="phead">
+    <button class="back" onclick="go('s3')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M13 4l-6 6 6 6" stroke="#0a0a0a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <span class="ptitle">구매후보 상세</span>
+  </div>
+  <div class="content">
+    <div class="dhero">
+      <img src="https://www.figma.com/api/mcp/asset/a1aa2194-6526-40db-aa27-2173f66cd00c" alt="블리치드 봄버자켓">
+      <div class="dbadge">가격변동 -11%</div>
+    </div>
+    <div class="dinfo">
+      <div class="dbrand">999휴머니티</div>
+      <div class="dname">블리치드 봄버자켓</div>
+      <div class="dpricerow">
+        <span class="dprice">89,000원</span>
+        <span class="dchange">-11% 가격변동</span>
+      </div>
+      <div class="dmeta">
+        <span>M</span><span class="dot">·</span>
+        <span>상</span><span class="dot">·</span>
+        <span class="grn">판매중</span>
+      </div>
+    </div>
+    <div class="dsec">
+      <div class="dsec-title">저장 이유</div>
+      <div class="dtags">
+        <span class="dtag">구매 후보</span>
+        <span class="dtag">가격 좋음</span>
+      </div>
+    </div>
+    <div class="dmemosec">
+      <div class="dsec-title">구매 판단 메모</div>
+      <div class="dmemod">가격이 내려가서 후보 1순위로 고려 중</div>
+    </div>
+    <div class="dattrs">
+      <div class="drow"><span class="dlbl">가격</span><span class="dval">58,000원</span></div>
+      <div class="drow"><span class="dlbl">사이즈</span><span class="dval">M</span></div>
+      <div class="drow"><span class="dlbl">상태</span><span class="dval">상</span></div>
+      <div class="drow"><span class="dlbl">판매 여부</span><span class="dval grn">판매중</span></div>
+      <div class="drow"><span class="dlbl">가격변동</span><span class="dval red">-11%</span></div>
+      <div class="drow"><span class="dlbl">우선순위</span><span class="dpri">1순위</span></div>
+    </div>
+    <div style="height:16px"></div>
+  </div>
+  <div class="bnav">
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9l7-6 7 6v8a1 1 0 01-1 1H4a1 1 0 01-1-1V9z" stroke="#6a7282" stroke-width="1.4" fill="none"/><path d="M7 19v-6h6v6" stroke="#6a7282" stroke-width="1.4" fill="none"/></svg><span>홈</span></button>
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="#6a7282" stroke-width="1.4"/><path d="M13.5 13.5l3.5 3.5" stroke="#6a7282" stroke-width="1.4" stroke-linecap="round"/></svg><span>탐색</span></button>
+    <button class="active"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="3" width="16" height="14" rx="2" stroke="#0a0a0a" stroke-width="1.4" fill="none"/><path d="M6 3V1M14 3V1M2 8h16" stroke="#0a0a0a" stroke-width="1.4" stroke-linecap="round"/></svg><span>내 피드</span></button>
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H7l-4 3V5a1 1 0 011-1z" stroke="#6a7282" stroke-width="1.4" fill="none"/></svg><span>채팅</span></button>
+    <button><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="#0a0a0a" stroke-width="1.4" fill="none"/><path d="M2.5 18c0-3.59 3.36-6.5 7.5-6.5s7.5 2.91 7.5 6.5" stroke="#0a0a0a" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg><span style="color:#0a0a0a">마이</span></button>
+    <div class="home-ind"></div>
+  </div>
+</div>
+
+</div><!-- /phone -->
+<script>
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById(id).querySelector('.content').scrollTop=0;
+}
+
+const sel=new Set();
+function toggleSel(card){
+  if(sel.has(card)){
+    sel.delete(card);
+    card.classList.remove('sel');
+  } else {
+    if(sel.size>=2){
+      const first=[...sel][0];
+      first.classList.remove('sel');
+      sel.delete(first);
+    }
+    sel.add(card);
+    card.classList.add('sel');
+  }
+  const bar=document.getElementById('cmpbar');
+  sel.size===2?bar.classList.remove('hidden'):bar.classList.add('hidden');
+}
+
+function setChip(chip,sid){
+  document.querySelectorAll('#'+sid+' .chip').forEach(c=>c.classList.remove('active'));
+  chip.classList.add('active');
+}
+</script>
+</body>
+</html>
